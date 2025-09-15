@@ -4,13 +4,19 @@ import pandas as pd
 import os
 
 class Data_parser:
-    def __init__(self, base_url="https://api.binance.com"):
+    def __init__(self, base_url="https://api.binance.com", future_base_url="https://fapi.binance.com"):
         self.base_url = base_url
+        self.future_base_url = future_base_url
         self.orderbook = {}
         self.open_interest = {}
 
     def make_request(self, endpoint, params={}):
         response = requests.get(self.base_url + endpoint, params=params)
+        response.raise_for_status()
+        return response.json()
+
+    def make_future_request(self, endpoint, params={}):
+        response = requests.get(self.future_base_url + endpoint, params=params)
         response.raise_for_status()
         return response.json()
 
@@ -31,6 +37,11 @@ class Data_parser:
         }
         return self.make_request(endpoint, params)
     
+    def get_open_interest(self, symbol):
+        endpoint = "/fapi/v1/openInterest"
+        params = {"symbol": symbol}
+        return self.make_future_request(endpoint, params)
+    
 if __name__ == "__main__":
     data_parser = Data_parser()
 
@@ -43,6 +54,8 @@ if __name__ == "__main__":
             
             orderbook_data = data_parser.get_orderbook(symbol)
             kline_data = data_parser.get_kline(symbol)
+            open_interest = data_parser.get_open_interest(symbol)
+            print(open_interest)
 
             bid_price = []
             bid_qty = []
@@ -66,7 +79,8 @@ if __name__ == "__main__":
                 "high": float(kline_data[0][2]),
                 "low": float(kline_data[0][3]),
                 "close": float(kline_data[0][4]),
-                "volume": float(kline_data[0][5])
+                "volume": float(kline_data[0][5]),
+                "open interest": open_interest["openInterest"]
             }
 
             df = pd.DataFrame([data])
