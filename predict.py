@@ -5,11 +5,13 @@ from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 
 dataset = pd.read_csv("reg_indicators.csv")
-y = dataset.iloc[:, -1].values
+y = dataset.iloc[:, -1].values # rate of return
 
+# for our indicators, except for orderbook imbalance, we need to preprocess our data.
 X_no_scale = dataset[["order imbalance"]].values
 X_to_scale = dataset[["macd signal", "ADX", "obv", "mid price", "delta volume", "delta price", "spread"]].values
 
+# split data into training ang test data
 split_index = int(len(y) * 0.8)
 
 X_to_scale_train = X_to_scale[:split_index]
@@ -19,6 +21,7 @@ X_no_scale_test = X_no_scale[split_index:]
 y_train = y[:split_index]
 y_test  = y[split_index:]
 
+# To preprocess our data, we normalize it
 sc = StandardScaler()
 X_to_scale_train = sc.fit_transform(X_to_scale_train)
 X_to_scale_test = sc.transform(X_to_scale_test)
@@ -26,13 +29,16 @@ X_to_scale_test = sc.transform(X_to_scale_test)
 X_train = np.hstack((X_no_scale_train, X_to_scale_train))
 X_test = np.hstack((X_no_scale_test, X_to_scale_test))
 
+# train our regression machine learning model
 regressor = LinearRegression()
 regressor.fit(X_train, y_train)
 
+# predict with our model
 y_pred = regressor.predict(X_test)
 np.set_printoptions(precision=2)
 print(np.concatenate((y_pred.reshape(len(y_pred), 1), y_test.reshape(len(y_test), 1)), axis=1))
 
+# Backtest
 data = pd.read_csv("data.csv")
 df = data.copy()
 price_plt = df.iloc[::5, :].reset_index(drop=True)
@@ -86,12 +92,8 @@ for r in total_ret:
     ret *= (1+r)
 ret -= 1
 print("總報酬:", ret)
-print("Long:", len(long_entries))
-print("Short:", len(short_entries))
-print("Exit:", len(exits))
 
-print("y_pred 範圍:", y_pred.min(), y_pred.max())
-print("threshold 範例:", 1.5 * y_test[:10].std())
+# visualization
 plt.figure(figsize=(14,7))
 plt.plot(price_plt["close"][split_index:], label="Price", color="blue")
 

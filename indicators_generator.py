@@ -1,13 +1,16 @@
 import pandas as pd
 import numpy as np
 
+# download raw data
 data = pd.read_csv("data.csv")
 df = data.copy()
 df= df.iloc[::5, :]
 
+# calculate spread and mid price
 df["spread"] = [float(ask[1: -1].split(", ")[0]) - float(bid[1: -1].split(", ")[0]) for bid, ask in zip(df["bid"], df["ask"])]
 df["mid price"] = [(float(ask[1: -1].split(", ")[0]) + float(bid[1: -1].split(", ")[0]))/2 for bid, ask in zip(df["bid"], df["ask"])]
 
+# calculate total orderbook imbalance
 total_bid_qty = []
 for qty in df["bid_qty"]:
   qty_list = qty[1: -1].split(", ")
@@ -29,15 +32,18 @@ df["ask total qty"] = total_ask_qty
 
 df["order imbalance"] = (df["bid total qty"] - df["ask total qty"])/(df["bid total qty"] + df["ask total qty"])
 
+# calculate changes in price and quantity
 df["delta price"] = df["close"] - df["close"].shift(1)
 df["delta volume"] = df["volume"] - df["volume"].shift(1)
 
+# calcalate OBV
 df["daily_ret"] = df["close"].pct_change()
 df['direction'] = np.where(df['daily_ret']>=0,1,-1)
 df['direction'][0] = 0
 df['vol_adj'] = df['volume'] * df['direction']
 df['obv'] = df['vol_adj'].cumsum()
 
+# calculate MACD
 slow_window = 26
 fast_window = 12
 signal_window = 9
@@ -47,6 +53,7 @@ df["macd"] = df["fast_ema"] - df["slow_ema"]
 df["signal"] = df["macd"].ewm(span=signal_window, min_periods=signal_window).mean()
 df["macd signal"] = df["macd"] - df["signal"]
 
+# calculate ATR
 n = 20
 df['H-L']=abs(df['high']-df['low'])
 df['H-PC']=abs(df['high']-df['close'].shift(1))
@@ -55,6 +62,7 @@ df['TR']=df[['H-L','H-PC','L-PC']].max(axis=1,skipna=False)
 df['ATR'] = df['TR'].rolling(n).mean()
 df['ATR'] = df['TR'].ewm(span=n,adjust=False,min_periods=n).mean()
 
+# calculate ADX
 window = 14
 df["+change"] = df["high"] - df["high"].shift(1)
 df["-change"] = df["low"].shift(1) - df["low"]
@@ -65,8 +73,10 @@ df["-DI14"] = 100 * (df["-DM"].ewm(com=window, min_periods=window).mean() / df["
 df["DX"] = 100 * (abs(df["+DI14"] - df["-DI14"]) / (df["+DI14"] + df["-DI14"]))
 df["ADX"] = df["DX"].ewm(com=window, min_periods=window).mean()
 
+# calculate rate of return
 df["return"] = df["close"].pct_change()
 df.dropna(inplace=True)
 
+# save indicators data
 indicators = df[["order imbalance", "macd signal", "spread", "mid price", "delta price", "delta volume", "ADX", "obv", "return"]]
 indicators.to_csv("reg_indicators.csv", index=False)
