@@ -36,6 +36,15 @@ df["order imbalance"] = (df["bid total qty"] - df["ask total qty"])/(df["bid tot
 df["delta price"] = df["close"] - df["close"].shift(1)
 df["delta volume"] = df["volume"] - df["volume"].shift(1)
 
+# calculate RSI
+window=14
+df["gain"] = np.where(df["delta price"]>=0, df["delta price"], 0)
+df["loss"] = np.where(df["delta price"]<0, -df["delta price"], 0)
+df["avg gain"] = df["gain"].ewm(alpha=1/window, min_periods=window).mean()
+df["avg loss"] = df["loss"].ewm(alpha=1/window, min_periods=window).mean()
+df["RS"] = df["avg gain"]/df["avg loss"]
+df["RSI"] = 100 - (100/(1+df["RS"]))
+
 # calcalate OBV
 df["daily_ret"] = df["close"].pct_change()
 df['direction'] = np.where(df['daily_ret']>=0,1,-1)
@@ -61,6 +70,7 @@ df['L-PC']=abs(df['low']-df['close'].shift(1))
 df['TR']=df[['H-L','H-PC','L-PC']].max(axis=1,skipna=False)
 df['ATR'] = df['TR'].rolling(n).mean()
 df['ATR'] = df['TR'].ewm(span=n,adjust=False,min_periods=n).mean()
+df['ATR%'] = df['ATR']/df['close']
 
 # calculate ADX
 window = 14
@@ -78,5 +88,5 @@ df["return"] = df["close"].pct_change()
 df.dropna(inplace=True)
 
 # save indicators data
-indicators = df[["order imbalance", "macd signal", "spread", "mid price", "delta price", "delta volume", "ADX", "obv", "return"]]
-indicators.to_csv("reg_indicators.csv", index=False)
+indicators = df[["order imbalance", "macd signal", "spread", "mid price", "delta price", "delta volume", "ADX", "obv","RSI", "open interest", "return", "ATR%"]]
+indicators.to_csv("indicators.csv", index=False)
