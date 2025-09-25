@@ -30,7 +30,7 @@ print(np.concatenate((y_pred.reshape(len(y_pred), 1), y_test.reshape(len(y_test)
 
 data = pd.read_csv("testing_data.csv")
 df = data.copy()
-price_plt = df.iloc[::5, :].reset_index(drop=True)
+price_plt = df.iloc[::3, :].reset_index(drop=True)
 
 position = ""
 initial_price = 0
