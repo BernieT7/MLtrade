@@ -3,9 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
+import yfinance as yf
 
-training_set = pd.read_csv("training_indicators.csv")
-testing_set = pd.read_csv("testing_indicators.csv")
+training_set = pd.read_csv("data/training_indicators.csv")
+testing_set = pd.read_csv("data/testing_indicators.csv")
 y_train = training_set[["return"]].values
 y_test = testing_set[["return"]].values
 
@@ -28,7 +29,7 @@ y_pred = regressor.predict(X_test)
 np.set_printoptions(precision=2)
 print(np.concatenate((y_pred.reshape(len(y_pred), 1), y_test.reshape(len(y_test), 1)), axis=1))
 
-data = pd.read_csv("testing_data.csv")
+data = pd.read_csv("data/testing_data.csv")
 df = data.copy()
 price_plt = df.iloc[::3, :].reset_index(drop=True)
 
@@ -76,20 +77,19 @@ for i in range(len(y_pred)):
             total_ret.append(pos_return)
             exits.append((i, end_price))
 
+ticker = "^TNX"
+rf_data = yf.download(ticker, period="1d")
+risk_free_rate = rf_data['Close'].iloc[-1] / 100
+risk_free_rate = risk_free_rate["^TNX"]/121
 
-ret = 1
-for r in total_ret:
-    ret *= (1+r)
-ret -= 1
-print("return:", ret)
+ret = np.mean(total_ret)
+print("average return:", ret)
 
 vol = np.std(total_ret)
 print("standard deviation:", vol)
 
-sharp_ratio = ((1+ret)**121)-1/(vol*np.sqrt(121))
+sharp_ratio = ((((1+ret)**121)-1)-risk_free_rate)/(vol*np.sqrt(121))
 print("sharp ratio:", sharp_ratio)
-
-((1+ret)**121)-1
 
 plt.figure(figsize=(14,7))
 plt.plot(price_plt["close"], label="Price", color="blue")

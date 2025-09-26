@@ -4,7 +4,7 @@ import numpy as np
 # download raw data
 data = pd.read_csv("data.csv")
 df = data.copy()
-df= df.iloc[::5, :]
+df= df.iloc[::3, :]
 
 # calculate spread and mid price
 df["spread"] = [float(ask[1: -1].split(", ")[0]) - float(bid[1: -1].split(", ")[0]) for bid, ask in zip(df["bid"], df["ask"])]
