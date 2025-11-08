@@ -11,13 +11,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-training_set = pd.read_csv("training_indicators3_log.csv")
-testing_set = pd.read_csv("testing_indicators3_log.csv")
-y_train = training_set[["return"]].values
-y_test = testing_set[["return"]].values
+training_set = pd.read_csv("training_indicators5_log.csv")
+testing_set = pd.read_csv("testing_indicators5_log.csv")
+y_train = training_set[["future 10t return"]].values
+y_test = testing_set[["future 10t return"]].values
 
-X_train = training_set[["order imbalance", "RSI", "macd signal", "log ADX", "obv", "mid price", "delta volume", "delta price", "open interest", "log spread"]].values
-X_test = testing_set[["order imbalance", "RSI", "macd signal", "log ADX", "obv", "mid price", "delta volume", "delta price", "open interest", "log spread"]].values
+X_train = training_set[["order imbalance", "RSI", "macd signal", "log ADX", "obv", "mid price", "delta volume", "delta price", "open interest", "log spread", "vol"]].values
+X_test = testing_set[["order imbalance", "RSI", "macd signal", "log ADX", "obv", "mid price", "delta volume", "delta price", "open interest", "log spread", "vol"]].values
 
 from sklearn.preprocessing import StandardScaler
 sc = StandardScaler()
@@ -70,20 +70,6 @@ print(model.summary())
 
 X_test
 
-# y_train = np.where(y_train > 0, 1, 0)
-# y_test = np.where(y_test > 0, 1, 0)
-
-# from sklearn.ensemble import RandomForestClassifier
-# classifier = RandomForestClassifier(n_estimators=100, criterion="gini", random_state=0)
-# classifier.fit(X_train, y_train)
-
-# y_pred = classifier.predict(X_test)
-
-# from sklearn.metrics import confusion_matrix, accuracy_score
-# cm = confusion_matrix(y_test, y_pred)
-# print(cm)
-# accuracy_score(y_test, y_pred)
-
 from sklearn.linear_model import LinearRegression
 regressor = LinearRegression()
 regressor.fit(X_train, y_train)
@@ -96,9 +82,6 @@ y_pred = np.where(y_pred>1, np.mean(y_test), y_pred)
 y_pred = np.where(y_pred<-1, np.mean(y_test), y_pred)
 np.set_printoptions(precision=5)
 print(np.concatenate((y_pred.reshape(len(y_pred), 1), y_test.reshape(len(y_test), 1)), axis=1))
-
-wrong_estimate = np.sum(y_pred-y_test)/len(y_pred)
-wrong_estimate
 
 y_pred = np.expm1(y_pred)
 y_pred
@@ -113,54 +96,12 @@ risk_free_rate = risk_free_rate["^TNX"]/121
 
 risk_free_rate
 
-data = pd.read_csv("testing_data.csv")
+data = pd.read_csv("training_data.csv")
 df = data.copy()
-price_plt = df.iloc[::3, :].reset_index(drop=True)
+price_plt = df.iloc[::5, :].reset_index(drop=True)
 
-position = ""
-initial_price = 0
-end_price = 0
-pos_return = 0
-total_ret = []
-
-ATR = testing_set["ATR%"]
-
-long_entries = []
-short_entries = []
-exits = []
 fee = 0.0005
-
-TP = 2
-SL = 2
-for i in range(len(y_pred)):
-    if position == "":
-        if (y_pred[i] > 2*fee):
-            position = "long"
-            initial_price = price_plt["close"][i]
-            long_entries.append((i, initial_price))
-
-        elif (y_pred[i] < -2*fee):
-            position = "short"
-            initial_price = price_plt["close"][i]
-            short_entries.append((i, initial_price))
-
-    elif position == "long":
-        end_price = price_plt["close"][i]
-        pos_return = (end_price * (1-fee) / initial_price * (1+fee)) - 1
-        if (pos_return >= TP*ATR[i]) or (pos_return <= -SL*ATR[i]):
-            position = ""
-            initial_price = 0
-            total_ret.append(pos_return)
-            exits.append((i, end_price))
-
-    elif position == "short":
-        end_price = price_plt["close"][i]
-        pos_return = 1 - (end_price  * (1+fee)/ initial_price * (1-fee))
-        if (pos_return >= TP*ATR[i]) or (pos_return <= -SL*ATR[i]):
-            position = ""
-            initial_price = 0
-            total_ret.append(pos_return)
-            exits.append((i, end_price))
+ATR = testing_set["ATR%"]
 
 def backtest(TP, SL):
     position = ""
@@ -169,11 +110,11 @@ def backtest(TP, SL):
 
     for i in range(len(y_pred)):
         if position == "":
-            if y_pred[i] > 2 * fee:
+            if y_pred[i] > 1*fee:
                 position = "long"
                 initial_price = price_plt["close"][i]
 
-            elif y_pred[i] < -2 * fee:
+            elif y_pred[i] < -1*fee:
                 position = "short"
                 initial_price = price_plt["close"][i]
 
@@ -218,6 +159,65 @@ for TP in tqdm(TP_range, desc="Searching TP"):
             best_TP, best_SL = TP, SL
 
 print(f"\nbest TP: {best_TP:.2f}\nbest SL: {best_SL:.2f}\nmax Sharpe Ratio: {best_SR:.4f}")
+
+data = pd.read_csv("testing_data.csv")
+df = data.copy()
+price_plt = df.iloc[::5, :].reset_index(drop=True)
+
+position = ""
+initial_price = 0
+end_price = 0
+pos_return = 0
+total_ret = []
+
+long_entries = []
+short_entries = []
+exits = []
+
+TP = best_TP
+SL = best_SL
+
+for i in range(len(y_pred)):
+    if position == "":
+        if (y_pred[i] > 1*fee):
+            position = "long"
+            initial_price = price_plt["close"][i]
+            long_entries.append((i, initial_price))
+
+        elif (y_pred[i] < -1*fee):
+            position = "short"
+            initial_price = price_plt["close"][i]
+            short_entries.append((i, initial_price))
+
+    elif position == "long":
+        end_price = price_plt["close"][i]
+        pos_return = (end_price * (1-fee) / initial_price * (1+fee)) - 1
+        if (pos_return >= TP*ATR[i]) or (pos_return <= -SL*ATR[i]):
+            position = ""
+            initial_price = 0
+            total_ret.append(pos_return)
+            exits.append((i, end_price))
+
+    elif position == "short":
+        end_price = price_plt["close"][i]
+        pos_return = 1 - (end_price  * (1+fee)/ initial_price * (1-fee))
+        if (pos_return >= TP*ATR[i]) or (pos_return <= -SL*ATR[i]):
+            position = ""
+            initial_price = 0
+            total_ret.append(pos_return)
+            exits.append((i, end_price))
+
+ret = np.mean(total_ret)
+# for r in total_ret:
+#     ret *= (1+r)
+# ret -= 1
+print("average return:", ret)
+
+vol = np.std(total_ret)
+print("standard deviation:", vol)
+
+sharp_ratio = ((((1+ret)**121)-1)-risk_free_rate)/(vol*np.sqrt(121))
+print("sharp ratio:", sharp_ratio)
 
 # data = pd.read_csv("testing_data.csv")
 # df = data.copy()
@@ -267,18 +267,6 @@ print(f"\nbest TP: {best_TP:.2f}\nbest SL: {best_SL:.2f}\nmax Sharpe Ratio: {bes
 #             total_ret.append(pos_return)
 #             exits.append((i, end_price))
 
-ret = np.mean(total_ret)
-# for r in total_ret:
-#     ret *= (1+r)
-# ret -= 1
-print("average return:", ret)
-
-vol = np.std(total_ret)
-print("standard deviation:", vol)
-
-sharp_ratio = ((((1+ret)**121)-1)-risk_free_rate)/(vol*np.sqrt(121))
-print("sharp ratio:", sharp_ratio)
-
 plt.figure(figsize=(14,7))
 plt.plot(price_plt["close"], label="Price", color="blue")
 
@@ -303,7 +291,7 @@ for ret in total_ret:
 print(sum(1 for ret in total_ret if ret > 0))
 print(sum(1 for ret in total_ret if ret < 0))
 
-print(sum(y_pred > fee+(fee*(1+y_pred))))
-print(sum(y_pred < -(fee+(fee*(1+y_pred)))))
+print(sum(1 for pred in y_pred if pred > 1/2*fee))
+print(sum(1 for pred in y_pred if pred < -1/2*fee))
 
 len(y_pred)
