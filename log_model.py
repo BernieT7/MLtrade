@@ -16,8 +16,8 @@ testing_set = pd.read_csv("testing_indicators5_log.csv")
 y_train = training_set[["future 10t return"]].values
 y_test = testing_set[["future 10t return"]].values
 
-X_train = training_set[["order imbalance", "RSI", "macd signal", "log ADX", "obv", "mid price", "delta volume", "delta price", "open interest", "log spread", "vol"]].values
-X_test = testing_set[["order imbalance", "RSI", "macd signal", "log ADX", "obv", "mid price", "delta volume", "delta price", "open interest", "log spread", "vol"]].values
+X_train = training_set[["delta price_t", "delta price_t-1", "delta price_t-2", "macd signal", "log spread", "mid price", "log ADX", "RSI", "open interest", "vol"]].values
+X_test = testing_set[["delta price_t", "delta price_t-1", "delta price_t-2", "macd signal", "log spread", "mid price", "log ADX", "RSI", "open interest", "vol"]].values
 
 from sklearn.preprocessing import StandardScaler
 sc = StandardScaler()
@@ -101,7 +101,7 @@ df = data.copy()
 price_plt = df.iloc[::5, :].reset_index(drop=True)
 
 fee = 0.0005
-ATR = testing_set["ATR%"]
+ATR = training_set["ATR%"]
 
 def backtest(TP, SL):
     position = ""
@@ -163,6 +163,7 @@ print(f"\nbest TP: {best_TP:.2f}\nbest SL: {best_SL:.2f}\nmax Sharpe Ratio: {bes
 data = pd.read_csv("testing_data.csv")
 df = data.copy()
 price_plt = df.iloc[::5, :].reset_index(drop=True)
+ATR = testing_set["ATR%"]
 
 position = ""
 initial_price = 0
@@ -291,7 +292,7 @@ for ret in total_ret:
 print(sum(1 for ret in total_ret if ret > 0))
 print(sum(1 for ret in total_ret if ret < 0))
 
-print(sum(1 for pred in y_pred if pred > 1/2*fee))
-print(sum(1 for pred in y_pred if pred < -1/2*fee))
+print(sum(1 for pred in y_pred if pred > 1*fee))
+print(sum(1 for pred in y_pred if pred < -1*fee))
 
 len(y_pred)
